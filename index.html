@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="SparseGrasp">
+  <meta name="keywords" content="Feature, 3DGS, 3D Gaussian Splatting, Distillation, Radiance Fields, Feature Fields">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="icon" type="image/x-icon" href="/feature-3dgs.github.io/media/pipeline.png">
+  
+  <title>SparseGrasp: Robotic Grasping via 3D Semantic Gaussian Splatting from Sparse Multi-View RGB Images</title>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script> -->
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+
+  <!-- custom additional scripts -->
+
+  <link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- https://docs.mathjax.org/en/latest/web/configuration.html#configuration-using-an-in-line-script -->
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      },
+      svg: {
+        fontCache: 'global'
+      }
+    };
+  </script>
+  <script type="text/javascript" id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+  </script>
+
+  <script
+  defer
+  src="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/index.js"
+  ></script>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/img-comparison-slider@8/dist/styles.css"
+  />
+
+  <!-- swiper -->
+  <!-- https://swiperjs.com/demos -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+  <link rel="image_src" href="./media/pipeline.png">
+  
+  <!-- img comparison slider -->
+  <!-- https://github.com/sneas/img-comparison-slider -->
+  <style>
+    .before,
+    .after {
+      margin: 0;
+    }
+  
+    .before figcaption,
+    .after figcaption {
+      background: #fff;
+      border: 1px solid #c0c0c0;
+      border-radius: 4px;
+      color: #2e3452;
+      opacity: 0.8;
+      padding: 4px;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      line-height: 70%;
+    }
+  
+    .before figcaption {
+      left: 4px;
+    }
+  
+    .after figcaption {
+      right: 4px;
+    }
+  </style>
+
+<style>
+  .button-container_teaser {
+      display: flex;       
+      justify-content: center; 
+      align-items: center;
+  }
+
+  .glow-button {
+      position: relative;
+      display: inline-block;
+      padding: 2px;
+      border-radius: 10px;
+      z-index: 0;
+      margin-bottom: 15px;
+  }
+
+  .glow-button button {
+      background: transparent; 
+      border: none; 
+      color: white; 
+      padding: 5px 10px; 
+      font-size: 16px; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      outline: none; 
+  }
+
+  .glow-button:before {
+      content: "";
+      background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      background-size: 400%;
+      z-index: -1;
+      filter: blur(5px);
+      -webkit-filter: blur(5px);
+      width: calc(100% + 4px);
+      height: calc(100% + 4px);
+      animation: glowing-button-85 20s linear infinite;
+      transition: opacity 0.3s ease-in-out;
+      border-radius: 10px;
+  }
+
+  @keyframes glowing-button-85 {
+      0% { background-position: 0 0; }
+      50% { background-position: 400% 0; }
+      100% { background-position: 0 0; }
+  }
+
+  .glow-button:after {
+      z-index: -1;
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #222;
+      left: 0;
+      top: 0;
+      border-radius: 10px;
+  }
+</style>
+
+<style>
+  .container_teaser {
+      display: flex; /* Enables Flexbox */
+      justify-content: center; /* Horizontally centers the content */
+      align-items: center; /* Vertically centers the content */
+      height: 100%; /* Set the height of the container */
+  }
+
+  .column_teaser {
+      flex: 0 0 auto; /* This ensures that the column doesn't grow or shrink */
+      width: 100%; /* Adjust this width as needed */
+      max-width: 800px; /* Adjust this max-width as needed */
+      margin: 0 auto; /* Centers the column within the container */
+  }
+</style>
+  <script
+  defer
+  src="./static/js/image-comparison-slider.js"
+  ></script>
+  <link
+    rel="stylesheet"
+    href="./static/css/image-comparison-slider.css"
+  />
+
+</head>
+<body>
+</head>
+<body>
+
+<!-- <nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+  <div class="navbar-menu">
+    <div class="navbar-start" style="flex-grow: 1; justify-content: center;">
+      <a class="navbar-item" href="https://keunhong.com">
+      <span class="icon">
+          <i class="fas fa-home"></i>
+      </span>
+      </a>
+
+      <div class="navbar-item has-dropdown is-hoverable">
+        <a class="navbar-link">
+          More Research
+        </a>
+        <div class="navbar-dropdown">
+          <a class="navbar-item" href="https://hypernerf.github.io">
+            HyperNeRF
+          </a>
+          <a class="navbar-item" href="https://nerfies.github.io">
+            Nerfies
+          </a>
+          <a class="navbar-item" href="https://latentfusion.github.io">
+            LatentFusion
+          </a>
+          <a class="navbar-item" href="https://photoshape.github.io">
+            PhotoShape
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</nav> -->
+
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <!-- <h1 class="title is-1 publication-title">Feature 3DGS: Supercharging 3D Gaussian Splatting to Enable Distilled Feature Fields</h1> -->
+          <h1 class="title is-1 publication-title">SparseGrasp</h1>
+          <h1 class="title is-2 publication-title">Robotic Grasping via 3D Semantic Gaussian Splatting from Sparse Multi-View RGB Images</h1>
+            <style>
+              .author-block {
+                  margin-right: 10px;
+              }
+            </style>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                <a href="">Junqiu Yu</a><sup>1*</sup>,</span>
+              <span class="author-block">
+                <a href="">Xinlin Ren</a><sup>1*</sup>,</span>
+              <span class="author-block">
+                <a href="">Yongchong Gu</a><sup>1</sup>,</span>
+              <span class="author-block">
+                <a href="">Haito Lin</a><sup>1</sup>,</span>
+              <span class="author-block"> 
+                <a href="">Tianyu Wang</a><sup>1</sup>,</span>
+              <span class="author-block"> 
+                <a href="">Yi Zhu</a><sup>2</sup>,</span>
+              <span class="author-block">
+                <a href="">Hang Xu</a><sup>2</sup>,</span>
+              <span class="author-block">
+                <a href="">Yugang Jiang</a><sup>1</sup>,</span>  
+              <span class="author-block">
+                <a href="">Xiangyang Xue</a><sup>1</sup>,</span>    
+              <span class="author-block"> 
+                <a href="">Yanwei Fu</a><sup>1</sup>,</span>
+              </span>
+            </div>
+
+          <!-- <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>University of California, Los Angeles</span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>2</sup>University of Texas at Austin</span>
+          </div>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>3</sup>DEVCOM Army Research Laboratory</span>
+          </div> -->
+          <style>
+            .univerity-block {
+                margin-right: 14px;
+            }
+          </style>
+          <div class="is-size-5 publication-authors">
+            <span class="univerity-block"><sup>1</sup>Fudan University</span>
+            <span class="univerity-block"><sup>2</sup>Department of Noah's Ark Lab, Huawei Technology</span>
+          </div>
+
+          <div class="is-size-6 publication-authors">
+            <span class="author-block">*Denotes Equal Contribution</span>
+          </div>
+
+          <!-- <div class="is-size-4 publication-authors">
+            <span class="univerity-block"><b>CVPR 2024, Seattle</b></span>
+            <span class="univerity-block">CVPR 2024, Seattle</span>
+            <a href="https://cvpr.thecvf.com/">CVPR 2024, Seattle</a>
+          </div> -->
+
+          <!-- <div class="is-size-5 publication-authors">
+            <span class="univerity-block" style="color: rgb(169, 16, 151);">CVPR 2024, Seattle</span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="univerity-block" style="color: rgb(252, 118, 0);"><b>✨ Highlight ✨</b> </span>
+          </div> -->
+          
+          <!-- <div class="is-size-5 publication-authors">
+            <span class="univerity-block" style="color: rgb(169, 16, 151);">CVPR 2024, Seattle</span>
+          </div> -->
+        
+          <!-- <div class="is-size-5 publication-authors">
+          <body>
+            <center>
+                <h1>
+                    <font color="#FF2626"><b>H</b></font>
+                    <font color="#252A34"><b>i</b></font>
+                    <font color="#753422"><b>g</b></font>
+                    <font color="#FFD523"><b>h</b></font>
+                    <font color="#71EFA3"><b>l</b></font>
+                    <font color="#0F52BA"><b>i</b></font>
+                    <font color="#66CC66"><b>g</b></font>
+                    <font color="#FF9966"><b>h</b></font>
+                    <font color="#FFCCCC"><b>t</b></font>
+                    <font color="#00C1D4">k</font>
+                    <font color="#EFE3D0">s</font>
+                </h1>
+            </center>
+          </body>
+          </div> -->
+        
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="https://arxiv.org/pdf/2412.02140"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <!-- Video Link. -->
+              <span class="link-block">
+                <a href="https://www.youtube.com/embed/KU6DFZ9tkG4?si=bB_QLpm_nUDQ3mvp"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-youtube"></i>
+                  </span>
+                  <span>Video</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <!-- <span class="link-block">
+                <a href="https://github.com/ShijieZhou-UCLA/feature-3dgs"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span> -->
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  
+
+
+  <section class="section">
+    <div class="container is-max-desktop">
+      <!-- <h2 class="title is-3 has-text-centered">Approach</h2> -->
+      <div class="content has-text-justified">
+        <div class="columns is-centered">
+          <figure class="image is-centered">
+            <img src="./media/teaser/teaser.jpg" alt="Pipeline Image">
+          </figure>
+        </div>
+        <p>
+            SparseGrasp reconstructs scenes from sparse-view RGB images and directly distills semantic features 
+            into Gaussians, enabling open-vocabulary scene understanding. Additionally, it efficiently handles scene updates 
+            and introduces a method for generating grasp poses directly from 3D Gaussians        
+        </p>
+      </div>
+    </div>
+  </section>
+  
+
+    <!-- <div class="hero-body">
+      <video id="teaser" autoplay muted loop playsinline height="100%">
+        <source src="./static/videos/teaser.mp4"
+                type="video/mp4">
+      </video>
+      <h2 class="subtitle has-text-centered">
+        <span class="dnerf">Nerfies</span> turns selfie videos from your phone into
+        free-viewpoint
+        portraits.
+      </h2>
+    </div>
+  </div> -->
+
+
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract</h2>
+        <div class="content has-text-justified">
+          <p>
+            Language-guided robotic grasping is a rapidly advancing field where robots are instructed using human language to grasp specific objects. However, existing methods
+            often depend on dense camera views and struggle to
+            quickly update scenes, limiting their effectiveness in changeable
+            environments. In contrast, we propose SparseGrasp, a novel
+            open-vocabulary robotic grasping system that operates efficiently with sparse-view RGB images and handles scene updates
+            fastly. Our system builds upon and significantly enhances existing computer vision modules in robotic learning. Specifically,
+            SparseGrasp utilizes DUSt3R to generate a dense point
+            cloud as the initialization for 3D Gaussian Splatting (3DGS),
+            maintaining high fidelity even under sparse supervision. Importantly, SparseGrasp incorporates semantic awareness from
+            recent vision foundation models. To further improve processing efficiency, we repurpose Principal Component Analysis
+            (PCA) to compress features from 2D models. Additionally, we
+            introduce a novel render-and-compare strategy that ensures
+            rapid scene updates, enabling multi-turn grasping in changeable
+            environments. Experimental results show that SparseGrasp
+            significantly outperforms state-of-the-art methods in terms of
+            both speed and adaptability, providing a robust solution for
+            multi-turn grasping in changeable environment.
+          </p>
+          
+          <div class="columns is-centered has-text-centered">
+            <div class="column is-four-fifths">
+              <h2 class="title is-3">Video</h2>
+              <div class="publication-video">
+                <iframe src="https://www.youtube.com/embed/KU6DFZ9tkG4?si=bB_QLpm_nUDQ3mvp"
+                        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+              </div>
+            </div>
+          </div>
+          <!--/ Paper video. -->
+        </div>
+      </div>
+    </div>
+    <!--/ Abstract. -->
+
+    <!-- Pipeline. -->
+    <!-- <h3 class="title is-4">Methodology</h3>
+    <div class="content has-text-justified">
+      <p>
+      </p>
+    </div>
+    <div class="columns is-centered has-text-centered">
+      <div class="column">
+        <img src="./media/pipeline.png"
+             class="interpolation-image"
+             alt="Interpolate start reference image."/>
+        <p>...</p>
+      </div>
+    </div> -->
+    <!--/ Pipeline. -->
+  </div>
+</section>
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Approach</h2>
+    <div class="content has-text-justified">
+      <div class="columns is-centered">
+        <figure class="image is-centered">
+          <img src="./media/pipeline/pipeline5.jpg" alt="Pipeline Image">
+        </figure>
+      </div>
+      <p>
+        Our method starts with collecting sparse view images and generating dense point clouds to initialize 3DGS.
+        Next, we integrate FastSAM and MaskCLIP to generate average features within each mask. Then, PCA is applied to compress
+        the whole average features in a low dimension, then distilled into 3DGS. Given an open-vocabulary language instruction,
+        our system can locate the target object and generate appropriate grasp poses. When scene changes, the Render-and-Compare
+        strategy enables fast scene updates      
+      </p>
+    </div>
+  </div>
+</section>
+
+
+  
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h3 class="title is-3">Extracting Good Visual Features from Sparse Views</h3>
+    <div class="content has-text-justified">
+    <p>
+        SparseGrasp integrates DUSt3R to generate a dense point cloud from sparse views as the scene's initialization. 
+        For dense visual feature extraction, it leverages MaskCLIP for patch-level alignment and FastSAM to produce masks 
+        with clear object boundaries, resolving overlaps by prioritizing smaller regions. 
+        This process results in a dense feature matrix with precise pixel-level semantics, 
+        achieved efficiently in approximately 180ms.
+        <br> 
+    </p>
+    </div>
+
+    <div class="columns is-centered">
+
+        <div class="columns is-centered">
+
+            <div class="column">
+              <h2 class="title is-6">Original Gaussian Splatting</h2>
+              <div>
+                  <img src="./media/extract/colmap_init.gif">
+              </div>
+            </div>
+      
+            <div class="column">
+              <h2 class="title is-6">SparseGrasp</h2>
+              <div>
+                  <img src="./media/extract/dust3r_init.gif">
+              </div>
+            </div>      
+        </div>
+    </div>
+
+
+    <style>
+      .before,
+      .after {
+        margin: 0;
+      }
+    
+      .before figcaption,
+      .after figcaption {
+        background: #fff;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        color: #2e3452;
+        opacity: 0.8;
+        padding: 4px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        line-height: 100%;
+      }
+    
+      .before figcaption {
+        left: 4px;
+      }
+    
+      .after figcaption {
+        right: 4px;
+      }
+    </style>
+  </div>
+</section>
+
+
+
+
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <h3 class="title is-3">3D Semantic Gaussian Splatting by Distilling Semantics</h3>
+    <div class="content has-text-justified">
+    <p>
+        SparseGrasp facilitates semantic feature distillation through enhanced differentiable rasterization 
+        and achieves real-time feature rendering by leveraging PCA for efficient feature compression.
+        <br> 
+    </p>
+    </div>
+
+    <div class="columns is-centered">
+
+        <div class="columns is-centered">
+
+            <div class="column">
+              <h2 class="title is-6">grape</h2>
+              <div>
+                  <img src="./media/distill/grape.gif">
+              </div>
+            </div>
+      
+            <div class="column">
+              <h2 class="title is-6">Baymax</h2>
+              <div>
+                  <img src="./media/distill/baymax.gif">
+              </div>
+            </div>      
+        </div>
+
+
+    <style>
+      .before,
+      .after {
+        margin: 0;
+      }
+    
+      .before figcaption,
+      .after figcaption {
+        background: #fff;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        color: #2e3452;
+        opacity: 0.8;
+        padding: 4px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        line-height: 100%;
+      }
+    
+      .before figcaption {
+        left: 4px;
+      }
+    
+      .after figcaption {
+        right: 4px;
+      }
+    </style>
+  </div>
+</section>   
+
+
+
+
+<section class="section">
+    <div class="container is-max-desktop">
+    <h3 class="title is-3">Render and Compare for Fast Scene Updating</h3>
+    <div class="columns is-centered">
+        <figure class="image is-centered">
+          <img src="./media/render_and_compare/dynamic.jpg" alt="Pipeline Image">
+        </figure>
+    </div>
+    <div class="content has-text-justified">
+    <p>
+        The proposed method handles changeable environments by using sparse-view images to predict objects' translations 
+        and rotations, which serve as optimization parameters. Moved pixels are detected using the MOG2 algorithm, their 
+        semantic features are used to identify object's 3D Gaussians, and optimization adjusts these Gaussians while rendering updated images. 
+        This efficient process, completing in ~200 ms.
+    </p>
+    </div>
+
+
+      
+      <!--/ Matting. -->
+    </div>
+
+    <style>
+      .before,
+      .after {
+        margin: 0;
+      }
+    
+      .before figcaption,
+      .after figcaption {
+        background: #fff;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        color: #2e3452;
+        opacity: 0.8;
+        padding: 4px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        line-height: 100%;
+      }
+    
+      .before figcaption {
+        left: 4px;
+      }
+    
+      .after figcaption {
+        right: 4px;
+      }
+    </style>
+  </div>
+</section>
+
+
+<section class="section">
+    <div class="container is-max-desktop">
+    <h3 class="title is-3"> Language-guided Robotic Grasping</h3>
+    <div class="columns is-centered">
+        <figure class="image is-centered" style="width: 70%;">
+          <img src="./media\grasp\grasp.jpg" alt="Pipeline Image">
+        </figure>
+    </div>
+    <div class="content has-text-justified">
+    <p>
+        In language-guided robotic grasping, existing methods rely on voxelization or multi-view inputs, 
+        which can introduce approximation errors. Instead, our approach retrains GraspNet by directly using 3D Gasussians as input
+        , avoiding resampling and enabling faster speed    
+    </p>
+    </div>
+
+
+      
+      <!--/ Matting. -->
+    </div>
+
+    <style>
+      .before,
+      .after {
+        margin: 0;
+      }
+    
+      .before figcaption,
+      .after figcaption {
+        background: #fff;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        color: #2e3452;
+        opacity: 0.8;
+        padding: 4px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        line-height: 100%;
+      }
+    
+      .before figcaption {
+        left: 4px;
+      }
+    
+      .after figcaption {
+        right: 4px;
+      }
+    </style>
+  </div>
+</section>
+
+
+
+<section class="section">
+    <div class="container is-max-desktop">
+    <h3 class="title is-3"> Qualitative results  </h3>
+    <div class="columns is-centered">
+        <figure class="image is-centered" style="width: 70%;">
+          <img src="./media\distill\compare.jpg" alt="Pipeline Image">
+        </figure>
+    </div>
+    <div class="content has-text-justified">
+    <p>
+        SparseGrasp is robotst under sparse-view setting, enbabling better semantic distillation effect.
+    </p>
+    </div>
+
+
+      
+      <!--/ Matting. -->
+    </div>
+
+    <style>
+      .before,
+      .after {
+        margin: 0;
+      }
+    
+      .before figcaption,
+      .after figcaption {
+        background: #fff;
+        border: 1px solid #c0c0c0;
+        border-radius: 4px;
+        color: #2e3452;
+        opacity: 0.8;
+        padding: 4px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        line-height: 100%;
+      }
+    
+      .before figcaption {
+        left: 4px;
+      }
+    
+      .after figcaption {
+        right: 4px;
+      }
+    </style>
+  </div>
+</section>
+
+
+
+
+<!-- <section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@inproceedings{zhou2024feature,
+    title={Feature 3dgs: Supercharging 3d gaussian splatting to enable distilled feature fields},
+    author={Zhou, Shijie and Chang, Haoran and Jiang, Sicheng and Fan, Zhiwen and Zhu, Zehao and Xu, Dejia and Chari, Pradyumna and You, Suya and Wang, Zhangyang and Kadambi, Achuta},
+    booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+    pages={21676--21685},
+    year={2024}
+}</code></pre>
+  </div>
+</section> -->
+
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link"
+         href="">
+        <i class="fas fa-file-pdf"></i>
+      </a>
+      <a class="icon-link" href="" class="external-link" disabled>
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            Source code borrowed from <a
+              href="https://github.com/nerfies/nerfies.github.io">Nerfies</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function toggleSliders() {
+      // Get both slider containers
+      var slider1 = document.getElementById("slider1-container_teaser");
+      var slider2 = document.getElementById("slider2-container_teaser");
+
+      // Toggle visibility
+      if (slider1.style.display === "none") {
+          slider1.style.display = "block";
+          slider2.style.display = "none";
+      } else {
+          slider1.style.display = "none";
+          slider2.style.display = "block";
+      }
+  }
+</script>
+
+</body>
+</html>
